@@ -1,19 +1,23 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { TrendingUp, Search, BarChart2, Activity, Brain } from 'lucide-react'
+import { TrendingUp, Search, BarChart2, Activity, Brain, PieChart, Clock } from 'lucide-react'
+import MarketStatus from './pages/MarketStatus'
+import TimingPicker from './pages/TimingPicker'
 import Backtest from './pages/Backtest'
 import Compare from './pages/Compare'
 import Picker from './pages/Picker'
 import WalkForward from './pages/WalkForward'
-import Analyst from './pages/Analyst'
+import Watchlist from './pages/Watchlist'
 import './index.css'
 
 function Layout({ children }) {
   const navItems = [
-    { to: '/', label: '单股回测', Icon: TrendingUp },
+    { to: '/', label: '市场状态', Icon: PieChart },
+    { to: '/backtest', label: '单股回测', Icon: TrendingUp },
     { to: '/compare', label: '策略对比', Icon: BarChart2 },
+    { to: '/timing', label: '时机选股', Icon: Clock },
     { to: '/picker', label: '选股中心', Icon: Search },
     { to: '/walk-forward', label: 'Walk-Forward', Icon: Activity },
-    { to: '/analyst', label: 'AI分析', Icon: Brain },
+    { to: '/watchlist', label: '自选分析', Icon: Brain },
   ]
 
   return (
@@ -74,11 +78,13 @@ export default function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Backtest />} />
+          <Route path="/" element={<MarketStatus />} />
+          <Route path="/backtest" element={<Backtest />} />
+          <Route path="/timing" element={<TimingPicker />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/picker" element={<Picker />} />
           <Route path="/walk-forward" element={<WalkForward />} />
-          <Route path="/analyst" element={<Analyst />} />
+          <Route path="/watchlist" element={<Watchlist />} />
         </Routes>
       </Layout>
     </BrowserRouter>

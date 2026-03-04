@@ -1,0 +1,171 @@
+{
+  "stocks": [
+    {
+      "code": "002267",
+      "name": "陕天然气",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "600026",
+      "name": "中远海能",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "600546",
+      "name": "山煤国际",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "300750",
+      "name": "宁德时代",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "核心资产",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "601137",
+      "name": "博威合金",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "000596",
+      "name": "古井贡酒",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "300761",
+      "name": "立华股份",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "603198",
+      "name": "迎驾贡酒",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "603279",
+      "name": "景津装备",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "603871",
+      "name": "嘉友国际",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "688036",
+      "name": "传音控股",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "920029",
+      "name": "开发科技",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "000999",
+      "name": "华润三九",
+      "holding": false,
+      "cost_price": 0.0,
+      "position_pct": 0.0,
+      "horizon": "",
+      "group": "选股中心",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "600487",
+      "name": "亨通光电",
+      "holding": true,
+      "cost_price": 49.28,
+      "position_pct": 33.0,
+      "horizon": "short",
+      "group": "默认自选",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "600550",
+      "name": "保变电气",
+      "holding": true,
+      "cost_price": 17.55,
+      "position_pct": 27.66,
+      "horizon": "short",
+      "group": "默认自选",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "000970",
+      "name": "中科三环",
+      "holding": true,
+      "cost_price": 14.28,
+      "position_pct": 6.5,
+      "horizon": "short",
+      "group": "默认自选",
+      "added_at": "2026-03-04"
+    },
+    {
+      "code": "600397",
+      "name": "江钨装备",
+      "holding": true,
+      "cost_price": 19.6,
+      "position_pct": 8.0,
+      "horizon": "short",
+      "group": "默认自选",
+      "added_at": "2026-03-04"
+    }
+  ]
+}

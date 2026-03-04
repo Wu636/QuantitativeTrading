@@ -72,37 +72,51 @@ class StockPicker:
                 f"page={page}&num={page_size}&sort=mktcap&asc=0&node=hs_a&symbol=&_s_r_a=page"
             )
 
-            try:
-                result = subprocess.run(
-                    [
-                        "curl", "-s", "-m", "15",
-                        "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-                        "-H", "Referer: https://finance.sina.com.cn/",
-                        url,
-                    ],
-                    capture_output=True, text=True, timeout=20,
-                )
-                if result.returncode != 0 or not result.stdout.strip():
-                    raise ConnectionError(f"curl failed: rc={result.returncode}")
-
-                items = json.loads(result.stdout)
-                if not items:
-                    break
-
-                all_data.extend(items)
-                print(f"  📥 第 {page} 页，已获取 {len(all_data)} 条...")
-
-                if len(items) < page_size:
-                    break  # 最后一页
-
-                page += 1
-                time.sleep(0.2)
-
-            except Exception as e:
+            max_retries = 3
+            items = None
+            
+            for attempt in range(max_retries):
+                try:
+                    result = subprocess.run(
+                        [
+                            "curl", "-s", "-m", "15",
+                            "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                            "-H", "Referer: https://finance.sina.com.cn/",
+                            url,
+                        ],
+                        capture_output=True, text=True, timeout=20,
+                    )
+                    
+                    if result.returncode != 0 or not result.stdout.strip():
+                        raise ConnectionError(f"curl failed: rc={result.returncode}")
+    
+                    items = json.loads(result.stdout)
+                    break # Success
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        print(f"  ⚠️ 第 {page} 页获取失败 (尝试 {attempt+1}/{max_retries}): {e}，正在重试...")
+                        time.sleep(1)
+                    else:
+                        print(f"  ❌ 第 {page} 页获取彻底失败: {e}")
+                        items = None
+            
+            if items is None:
                 if page == 1:
-                    raise ConnectionError(f"新浪财经 API 连接失败: {e}")
-                print(f"  ⚠️ 第 {page} 页获取失败，使用已获取的 {len(all_data)} 条数据")
+                    raise ConnectionError(f"新浪财经 API 连接失败，已重试 {max_retries} 次。")
+                print(f"  ⚠️ 终止抓取，使用已获取的 {len(all_data)} 条数据")
                 break
+                
+            if not items:
+                break
+
+            all_data.extend(items)
+            print(f"  📥 第 {page} 页，已获取 {len(all_data)} 条...")
+
+            if len(items) < page_size:
+                break  # 最后一页
+
+            page += 1
+            time.sleep(0.2)
 
         print(f"  获取到 {len(all_data)} 条原始数据，正在解析...")
 

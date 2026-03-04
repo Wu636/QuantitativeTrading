@@ -172,14 +172,14 @@ export default function Compare() {
                                                     {ALL_STRATEGIES.find(s => s.key === r.key)?.label}
                                                     {beat && <span className="tag tag-green" style={{ marginLeft: 6 }}>超基准</span>}
                                                 </td>
-                                                <td style={{ color: m.total_return > 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 600 }}>
+                                                <td style={{ color: m.total_return > 0 ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 600 }}>
                                                     {pct(m.total_return)}
                                                 </td>
-                                                <td style={{ color: m.annual_return > 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                                                <td style={{ color: m.annual_return > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                                                     {pct(m.annual_return)}
                                                 </td>
                                                 <td style={{ color: 'var(--accent-red)' }}>{pct(m.max_drawdown, false)}</td>
-                                                <td style={{ color: m.sharpe_ratio > 1 ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                                                <td style={{ color: m.sharpe_ratio > 1 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
                                                     {m.sharpe_ratio?.toFixed(2)}
                                                 </td>
                                                 <td>{pct(m.win_rate, false)}</td>

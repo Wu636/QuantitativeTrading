@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Save, Trash2, Plus, Info } from 'lucide-react'
+import { Search, Save, Trash2, Plus, Info, Heart } from 'lucide-react'
 
 const API = ''
 
@@ -19,7 +19,7 @@ export default function Picker() {
     const [maxVolumeRatio, setMaxVolumeRatio] = useState(null)
     const [industryPbAware, setIndustryPbAware] = useState(false)
     const [minMomentum, setMinMomentum] = useState(null)
-    
+
     // === 权重参数状态（7 因子）===
     const [weights, setWeights] = useState({
         value: 0.25,
@@ -37,16 +37,13 @@ export default function Picker() {
     const [result, setResult] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
-    
+
     // === 弹窗状态 ===
     const [showSaveModal, setShowSaveModal] = useState(false)
     const [newTemplateName, setNewTemplateName] = useState('')
     const [newTemplateDesc, setNewTemplateDesc] = useState('')
 
-    // 获取模板列表
-    useEffect(() => {
-        fetchTemplates()
-    }, [])
+
 
     async function fetchTemplates() {
         try {
@@ -137,13 +134,13 @@ export default function Picker() {
                 fetchTemplates()
                 const data = await res.json()
                 if (data.template) {
-                     setActiveTemplateId(data.template.id)
+                    setActiveTemplateId(data.template.id)
                 }
             } else {
                 alert((await res.json()).detail || '保存失败')
             }
         } catch (e) {
-             alert('保存失败: ' + e.message)
+            alert('保存失败: ' + e.message)
         }
     }
 
@@ -183,7 +180,7 @@ export default function Picker() {
     }
 
     function scoreColor(score) {
-        if (score >= 70) return 'var(--accent-green)'
+        if (score >= 70) return 'var(--accent-red)'
         if (score >= 50) return 'var(--accent-gold)'
         return 'var(--text-secondary)'
     }
@@ -193,11 +190,97 @@ export default function Picker() {
         return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`
     }
 
+    // === 自选股状态 ===
+    const [watchlistSet, setWatchlistSet] = useState(new Set())
+
+    // 获取模板和自选状态
+    useEffect(() => {
+        fetchTemplates()
+        fetchWatchlist()
+    }, [])
+
+    async function fetchWatchlist() {
+        try {
+            const res = await fetch(`${API}/api/watchlist`)
+            if (res.ok) {
+                const data = await res.json()
+                if (data.stocks) {
+                    setWatchlistSet(new Set(data.stocks.map(s => s.code)))
+                }
+            }
+        } catch (e) {
+            console.error("加载自选失败", e)
+        }
+    }
+
     function capStr(v) {
         if (!v) return '—'
         if (v >= 1e12) return `${(v / 1e12).toFixed(1)}万亿`
         if (v >= 1e8) return `${(v / 1e8).toFixed(0)}亿`
         return v.toLocaleString()
+    }
+
+    const handleAddWatchlist = async (s, isWatched) => {
+        try {
+            if (isWatched) {
+                const res = await fetch(`${API}/api/watchlist/${s['代码']}`, { method: 'DELETE' })
+                if (res.ok) {
+                    setWatchlistSet(prev => {
+                        const next = new Set(prev)
+                        next.delete(s['代码'])
+                        return next
+                    })
+                }
+            } else {
+                const res = await fetch(`${API}/api/watchlist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: s['代码'], name: s['名称'], holding: false, group: '选股中心' })
+                })
+                if (res.ok) {
+                    setWatchlistSet(prev => new Set(prev).add(s['代码']))
+                }
+            }
+        } catch (e) {
+            alert('操作自选失败')
+        }
+    }
+
+    const handleBatchAddWatchlist = async () => {
+        if (!result || !result.stocks) return
+
+        const toAdd = result.stocks.filter(s => !watchlistSet.has(s['代码']))
+        if (toAdd.length === 0) {
+            alert('当前列表股票都已在自选中')
+            return
+        }
+
+        const payload = {
+            stocks: toAdd.map(s => ({
+                code: s['代码'],
+                name: s['名称'],
+                holding: false,
+                group: '选股中心'
+            }))
+        }
+
+        try {
+            const res = await fetch(`${API}/api/watchlist/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            if (res.ok) {
+                alert(`已成功批量加入 ${toAdd.length} 只股票至自选（分组：选股中心）`)
+                setWatchlistSet(prev => {
+                    const next = new Set(prev)
+                    toAdd.forEach(s => next.add(s['代码']))
+                    return next
+                })
+            }
+        } catch (e) {
+            alert('批量加入自选失败')
+        }
     }
 
     return (
@@ -216,10 +299,10 @@ export default function Picker() {
                 <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: 'var(--text-primary)' }}>1. 选择选股模板</h3>
                 <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
                     {templates.map(tmpl => (
-                        <div 
-                            key={tmpl.id} 
+                        <div
+                            key={tmpl.id}
                             onClick={() => applyTemplate(tmpl)}
-                            style={{ 
+                            style={{
                                 minWidth: 200, padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
                                 border: `1px solid ${activeTemplateId === tmpl.id ? 'var(--accent-blue)' : 'var(--border)'}`,
                                 background: activeTemplateId === tmpl.id ? 'rgba(59, 130, 246, 0.05)' : 'var(--bg-card)',
@@ -231,7 +314,7 @@ export default function Picker() {
                                     {tmpl.name}
                                 </span>
                                 {!tmpl.builtin && (
-                                    <Trash2 size={14} style={{ color: 'var(--accent-red)', opacity: 0.7 }} 
+                                    <Trash2 size={14} style={{ color: 'var(--accent-red)', opacity: 0.7 }}
                                         onClick={(e) => deleteTemplate(tmpl.id, e)} />
                                 )}
                             </div>
@@ -240,10 +323,10 @@ export default function Picker() {
                             </div>
                         </div>
                     ))}
-                    
-                    <div 
+
+                    <div
                         onClick={() => { setActiveTemplateId(null); setShowSaveModal(true) }}
-                        style={{ 
+                        style={{
                             minWidth: 160, padding: 16, borderRadius: 10, cursor: 'pointer',
                             border: '1px dashed var(--border)', background: 'transparent',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -261,10 +344,10 @@ export default function Picker() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>2. 调整选股规则与权重</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-                        <Info size={14}/> 修改参数后可保存为新模板
+                        <Info size={14} /> 修改参数后可保存为新模板
                     </div>
                 </div>
-                
+
                 {/* 基础筛选条件 */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px 20px', marginBottom: 24 }}>
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>市盈率下限 (PE)</label><input className="input-field" type="number" step="0.1" value={minPe} onChange={e => { setMinPe(parseFloat(e.target.value) || 0); setActiveTemplateId(null) }} /></div>
@@ -272,7 +355,7 @@ export default function Picker() {
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>市净率上限 (PB)</label><input className="input-field" type="number" step="0.1" value={maxPb} onChange={e => { setMaxPb(parseFloat(e.target.value) || 0); setActiveTemplateId(null) }} /></div>
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>最低换手率 (%)</label><input className="input-field" type="number" step="0.1" value={minTurnover} onChange={e => { setMinTurnover(parseFloat(e.target.value) || 0); setActiveTemplateId(null) }} /></div>
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>返回数量 Top N</label><input className="input-field" type="number" value={topN} onChange={e => { setTopN(parseInt(e.target.value) || 20); setActiveTemplateId(null) }} /></div>
-                    
+
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>最低市值 (亿元)</label><input className="input-field" type="number" value={minMarketCap} onChange={e => { setMinMarketCap(parseFloat(e.target.value) || 0); setActiveTemplateId(null) }} /></div>
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>最高市值 (亿元)</label><input className="input-field" type="number" value={maxMarketCap || ''} placeholder="无限制" onChange={e => { setMaxMarketCap(parseFloat(e.target.value) || null); setActiveTemplateId(null) }} /></div>
                     <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>最低股价 (元)</label><input className="input-field" type="number" step="0.1" value={minPrice} onChange={e => { setMinPrice(parseFloat(e.target.value) || 0); setActiveTemplateId(null) }} /></div>
@@ -295,8 +378,8 @@ export default function Picker() {
                     </div>
                 </div>
 
-                <hr style={{ borderTop: '1px solid var(--border)', borderBottom: 'none', margin: '0 0 20px 0', opacity: 0.5 }}/>
-                
+                <hr style={{ borderTop: '1px solid var(--border)', borderBottom: 'none', margin: '0 0 20px 0', opacity: 0.5 }} />
+
                 {/* 因子权重滑块 - 7因子 */}
                 <h4 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 16 }}>多因子打分权重配置（7 因子）</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginBottom: 20 }}>
@@ -306,7 +389,7 @@ export default function Picker() {
                                 <span style={{ color: 'var(--text-primary)' }}>{label}</span>
                                 <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{(weights[key] * 100).toFixed(0)}%</span>
                             </div>
-                            <input 
+                            <input
                                 type="range" min="0" max="1" step="0.05"
                                 value={weights[key]}
                                 onChange={(e) => {
@@ -318,7 +401,7 @@ export default function Picker() {
                         </div>
                     ))}
                 </div>
-                
+
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 10 }}>
                     <button className="btn btn-primary" onClick={run} disabled={loading} style={{ height: 42, padding: '0 32px', fontSize: 15, borderRadius: 8 }}>
                         {loading ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <Search size={18} />}
@@ -335,20 +418,20 @@ export default function Picker() {
                 }}>
                     <div className="card animate-fadein" style={{ width: 400, transform: 'translateY(-100px)' }}>
                         <h3 style={{ marginTop: 0, marginBottom: 20, fontSize: 18, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>保存自定义模板</h3>
-                        
+
                         <div style={{ marginBottom: 16 }}>
                             <label style={{ display: 'block', fontSize: 13, marginBottom: 8, color: 'var(--text-secondary)' }}>模板名称 (带个图标如🚀更好看)</label>
-                            <input className="input-field" value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)} placeholder="如：🚀 短线强动量"/>
+                            <input className="input-field" value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)} placeholder="如：🚀 短线强动量" />
                         </div>
-                        
+
                         <div style={{ marginBottom: 24 }}>
                             <label style={{ display: 'block', fontSize: 13, marginBottom: 8, color: 'var(--text-secondary)' }}>一句话描述</label>
-                            <input className="input-field" value={newTemplateDesc} onChange={e => setNewTemplateDesc(e.target.value)} placeholder="如：适合持仓3-5天的量价突破票"/>
+                            <input className="input-field" value={newTemplateDesc} onChange={e => setNewTemplateDesc(e.target.value)} placeholder="如：适合持仓3-5天的量价突破票" />
                         </div>
-                        
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                             <button className="btn btn-outline" onClick={() => setShowSaveModal(false)}>取消</button>
-                            <button className="btn btn-primary" onClick={saveCustomTemplate}><Save size={16}/>确认保存</button>
+                            <button className="btn btn-primary" onClick={saveCustomTemplate}><Save size={16} />确认保存</button>
                         </div>
                     </div>
                 </div>
@@ -370,9 +453,14 @@ export default function Picker() {
 
             {result && !loading && (
                 <>
-                    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 16, fontWeight: 600 }}>选股结果 Top {result.total}</span>
-                        <span className="tag tag-gold">多因子排名</span>
+                    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 16, fontWeight: 600 }}>选股结果 Top {result.total}</span>
+                            <span className="tag tag-gold">多因子排名</span>
+                        </div>
+                        <button className="btn btn-outline" style={{ fontSize: 13, height: 32, padding: '0 12px' }} onClick={handleBatchAddWatchlist}>
+                            <Heart size={14} style={{ marginRight: 6 }} /> 批量加入自选
+                        </button>
                     </div>
 
                     <div className="card">
@@ -398,31 +486,45 @@ export default function Picker() {
                                         <th style={{ color: '#f97316' }}>资金</th>
                                         <th style={{ color: '#10b981' }}>ROE</th>
                                         <th style={{ fontWeight: 700 }}>总分</th>
+                                        <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {result.stocks.map((s, i) => (
-                                        <tr key={i}>
-                                            <td style={{ fontWeight: 600, color: i < 3 ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>{i + 1}</td>
-                                            <td><span className="tag tag-blue">{s['代码']}</span></td>
-                                            <td style={{ fontWeight: 500 }}>{s['名称']}</td>
-                                            <td>¥{s['最新价']?.toFixed(2)}</td>
-                                            <td style={{ color: s['涨跌幅'] > 0 ? 'var(--accent-green)' : s['涨跌幅'] < 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{pctStr(s['涨跌幅'])}</td>
-                                            <td>{s['市盈率-动态']?.toFixed(1)}</td>
-                                            <td>{s['市净率']?.toFixed(2)}</td>
-                                            <td style={{ color: 'var(--text-secondary)' }}>{capStr(s['总市值'])}</td>
-                                            <td>{s['换手率']?.toFixed(2)}%</td>
-                                            <td>{s['量比']?.toFixed(2) ?? '—'}</td>
-                                            <td style={{ color: scoreColor(s.factor_value) }}>{s.factor_value?.toFixed(0)}</td>
-                                            <td style={{ color: scoreColor(s.factor_momentum) }}>{s.factor_momentum?.toFixed(0)}</td>
-                                            <td style={{ color: scoreColor(s.factor_quality) }}>{s.factor_quality?.toFixed(0)}</td>
-                                            <td style={{ color: scoreColor(s.factor_liquidity) }}>{s.factor_liquidity?.toFixed(0)}</td>
-                                            <td style={{ color: scoreColor(s.factor_size) }}>{s.factor_size?.toFixed(0)}</td>
-                                            <td style={{ color: scoreColor(s.factor_capital_flow) }}>{s.factor_capital_flow?.toFixed(0) ?? '—'}</td>
-                                            <td style={{ color: scoreColor(s.factor_roe) }}>{s.factor_roe?.toFixed(0) ?? '—'}</td>
-                                            <td style={{ fontWeight: 700, fontSize: 15, color: scoreColor(s.total_score) }}>{s.total_score?.toFixed(1)}</td>
-                                        </tr>
-                                    ))}
+                                    {result.stocks.map((s, i) => {
+                                        const isWatched = watchlistSet.has(s['代码'])
+                                        return (
+                                            <tr key={i}>
+                                                <td style={{ fontWeight: 600, color: i < 3 ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>{i + 1}</td>
+                                                <td><span className="tag tag-blue">{s['代码']}</span></td>
+                                                <td style={{ fontWeight: 500 }}>{s['名称']}</td>
+                                                <td>¥{s['最新价']?.toFixed(2)}</td>
+                                                <td style={{ color: s['涨跌幅'] > 0 ? 'var(--accent-red)' : s['涨跌幅'] < 0 ? 'var(--accent-green)' : 'var(--text-secondary)' }}>{pctStr(s['涨跌幅'])}</td>
+                                                <td>{s['市盈率-动态']?.toFixed(1)}</td>
+                                                <td>{s['市净率']?.toFixed(2)}</td>
+                                                <td style={{ color: 'var(--text-secondary)' }}>{capStr(s['总市值'])}</td>
+                                                <td>{s['换手率']?.toFixed(2)}%</td>
+                                                <td>{s['量比']?.toFixed(2) ?? '—'}</td>
+                                                <td style={{ color: scoreColor(s.factor_value) }}>{s.factor_value?.toFixed(0)}</td>
+                                                <td style={{ color: scoreColor(s.factor_momentum) }}>{s.factor_momentum?.toFixed(0)}</td>
+                                                <td style={{ color: scoreColor(s.factor_quality) }}>{s.factor_quality?.toFixed(0)}</td>
+                                                <td style={{ color: scoreColor(s.factor_liquidity) }}>{s.factor_liquidity?.toFixed(0)}</td>
+                                                <td style={{ color: scoreColor(s.factor_size) }}>{s.factor_size?.toFixed(0)}</td>
+                                                <td style={{ color: scoreColor(s.factor_capital_flow) }}>{s.factor_capital_flow?.toFixed(0) ?? '—'}</td>
+                                                <td style={{ color: scoreColor(s.factor_roe) }}>{s.factor_roe?.toFixed(0) ?? '—'}</td>
+                                                <td style={{ fontWeight: 700, fontSize: 15, color: scoreColor(s.total_score) }}>{s.total_score?.toFixed(1)}</td>
+                                                <td>
+                                                    <button
+                                                        className="icon-btn"
+                                                        style={{ color: isWatched ? 'var(--accent-red)' : 'var(--text-secondary)', opacity: isWatched ? 1 : 0.5 }}
+                                                        onClick={() => handleAddWatchlist(s, isWatched)}
+                                                        title={isWatched ? "取消自选" : "加入自选"}
+                                                    >
+                                                        <Heart size={15} fill={isWatched ? 'var(--accent-red)' : 'none'} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>

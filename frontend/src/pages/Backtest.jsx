@@ -16,7 +16,7 @@ const STRATEGIES = [
 ]
 
 function MetricCard({ label, value, sub, up }) {
-    const color = up === undefined ? 'var(--text-primary)' : up ? 'var(--accent-green)' : 'var(--accent-red)'
+    const color = up === undefined ? 'var(--text-primary)' : up ? 'var(--accent-red)' : 'var(--accent-green)'
     return (
         <div className="card" style={{ padding: '16px 20px' }}>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>{label}</div>

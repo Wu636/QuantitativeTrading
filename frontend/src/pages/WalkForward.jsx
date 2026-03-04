@@ -169,7 +169,7 @@ export default function WalkForward() {
                             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>平均样本外收益</div>
                             <div style={{
                                 fontSize: 22, fontWeight: 700,
-                                color: s.avg_out_sample_return > 0 ? 'var(--accent-green)' : 'var(--accent-red)'
+                                color: s.avg_out_sample_return > 0 ? 'var(--accent-red)' : 'var(--accent-green)'
                             }}>
                                 {pct(s.avg_out_sample_return)}
                             </div>
@@ -181,7 +181,7 @@ export default function WalkForward() {
                             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>平均样本外夏普</div>
                             <div style={{
                                 fontSize: 22, fontWeight: 700,
-                                color: s.avg_out_sample_sharpe > 0 ? 'var(--accent-green)' : 'var(--accent-red)'
+                                color: s.avg_out_sample_sharpe > 0 ? 'var(--accent-red)' : 'var(--accent-green)'
                             }}>
                                 {s.avg_out_sample_sharpe?.toFixed(3)}
                             </div>
@@ -244,11 +244,11 @@ export default function WalkForward() {
                                                 title={d.best_params}>
                                                 {d.best_params}
                                             </td>
-                                            <td style={{ color: d.in_sample_return > 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                                            <td style={{ color: d.in_sample_return > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                                                 {pct(d.in_sample_return)}
                                             </td>
                                             <td>{d.in_sample_sharpe?.toFixed(2)}</td>
-                                            <td style={{ fontWeight: 600, color: d.out_sample_return > 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                                            <td style={{ fontWeight: 600, color: d.out_sample_return > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                                                 {pct(d.out_sample_return)}
                                             </td>
                                             <td style={{ fontWeight: 600 }}>{d.out_sample_sharpe?.toFixed(2)}</td>
