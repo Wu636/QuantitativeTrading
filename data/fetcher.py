@@ -5,18 +5,63 @@
 import os
 import akshare as ak
 import pandas as pd
+import re
 from datetime import datetime, timedelta
+
+_PROXY_ENV_CACHE = {}
 
 
 def _clear_proxy():
     """清除代理环境变量，避免国内 API 走代理连不上"""
     for key in ["http_proxy", "https_proxy", "all_proxy",
                 "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
+        if key in os.environ:
+            _PROXY_ENV_CACHE[key] = os.environ[key]
         os.environ.pop(key, None)
 
 
 class DataFetcher:
     """A股数据获取器"""
+
+    @staticmethod
+    def resolve_stock_symbol(query: str) -> tuple[str, str]:
+        """
+        根据股票代码或名称解析 A 股代码。
+
+        Returns
+        -------
+        tuple[str, str]
+            (股票代码, 股票名称)
+        """
+        raw = (query or "").strip()
+        if not raw:
+            raise ValueError("请输入股票名称或代码")
+
+        code_match = re.search(r"(\d{6})", raw)
+        if code_match:
+            symbol = code_match.group(1)
+            return symbol, DataFetcher.get_stock_name(symbol)
+
+        _clear_proxy()
+        try:
+            code_name_df = ak.stock_info_a_code_name()
+            code_name_df = code_name_df.rename(columns={"code": "代码", "name": "名称"})
+            matches = code_name_df[
+                code_name_df["名称"].astype(str).str.contains(raw, case=False, regex=False)
+            ]
+            exact = matches[matches["名称"].astype(str) == raw]
+            if not exact.empty:
+                row = exact.iloc[0]
+            elif not matches.empty:
+                row = matches.iloc[0]
+            else:
+                raise ValueError(f"未找到股票：{raw}")
+
+            return str(row["代码"]).zfill(6), str(row["名称"])
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError(f"股票名称解析失败，请改用 6 位股票代码。原因：{exc}") from exc
 
     @staticmethod
     def get_stock_daily(
@@ -85,12 +130,229 @@ class DataFetcher:
         df = df.set_index("date").sort_index()
 
         # 确保数值类型
-        numeric_cols = ["open", "close", "high", "low", "volume", "amount"]
+        numeric_cols = [
+            "open", "close", "high", "low", "volume", "amount",
+            "amplitude", "pct_change", "change", "turnover",
+        ]
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
         print(f"成功获取 {len(df)} 条数据")
+        return df
+
+    @staticmethod
+    def get_market_index_daily(
+        symbol: str,
+        start_date: str = None,
+        end_date: str = None,
+    ) -> pd.DataFrame:
+        """
+        获取基准指数日线数据。
+
+        Parameters
+        ----------
+        symbol : str
+            指数代码，可传 sh000002、sz399107、000002 等。
+        """
+        if end_date is None:
+            end_date = datetime.now().strftime("%Y%m%d")
+        if start_date is None:
+            start_date = (datetime.now() - timedelta(days=730)).strftime("%Y%m%d")
+
+        raw_symbol = str(symbol).strip().lower()
+        if raw_symbol.startswith(("sh", "sz")):
+            index_symbol = raw_symbol
+        elif raw_symbol.startswith(("399", "159", "399")):
+            index_symbol = f"sz{raw_symbol}"
+        else:
+            index_symbol = f"sh{raw_symbol}"
+
+        _clear_proxy()
+        print(f"正在获取指数 {index_symbol} 的日线数据...")
+
+        try:
+            df = DataFetcher._fetch_index_via_sina(index_symbol, start_date, end_date)
+        except Exception as e:
+            print(f"  ⚠️ 新浪指数获取失败 ({type(e).__name__})，尝试 akshare 指数接口...")
+            df = ak.stock_zh_index_daily_em(symbol=index_symbol)
+
+        df = df.rename(
+            columns={
+                "date": "date",
+                "open": "open",
+                "close": "close",
+                "high": "high",
+                "low": "low",
+                "volume": "volume",
+                "amount": "amount",
+            }
+        )
+
+        if "date" not in df.columns:
+            raise ValueError(f"指数 {index_symbol} 返回数据缺少日期列")
+
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.set_index("date").sort_index()
+
+        for col in ["open", "close", "high", "low", "volume", "amount"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        start_dt = pd.to_datetime(start_date)
+        end_dt = pd.to_datetime(end_date)
+        df = df[(df.index >= start_dt) & (df.index <= end_dt)]
+
+        print(f"成功获取指数 {len(df)} 条数据")
+        return df
+
+    @staticmethod
+    def get_sina_realtime_quote(symbol: str) -> dict | None:
+        """获取新浪实时行情，返回 price/pre_close/pct/date 等字段。"""
+        import subprocess
+
+        raw_symbol = str(symbol).strip().lower()
+        if raw_symbol.startswith(("sh", "sz")):
+            sina_symbol = raw_symbol
+        elif raw_symbol.startswith(("6", "9", "000")):
+            sina_symbol = f"sh{raw_symbol}"
+        else:
+            sina_symbol = f"sz{raw_symbol}"
+
+        result = subprocess.run(
+            [
+                "curl", "-s", "-m", "10",
+                "--noproxy", "*",
+                "-H", "User-Agent: Mozilla/5.0",
+                "-H", "Referer: https://finance.sina.com.cn/",
+                f"https://hq.sinajs.cn/list={sina_symbol}",
+            ],
+            capture_output=True, timeout=12,
+        )
+        if result.returncode != 0 or not result.stdout:
+            return None
+
+        text = result.stdout.decode("gbk", errors="replace").strip()
+        if '"' not in text:
+            return None
+        raw = text.split('"')[1]
+        parts = raw.split(",")
+        if len(parts) < 32 or not parts[3]:
+            return None
+
+        def safe_float(value):
+            try:
+                return float(value)
+            except Exception:
+                return None
+
+        price = safe_float(parts[3])
+        pre_close = safe_float(parts[2])
+        if not price or not pre_close:
+            return None
+
+        return {
+            "symbol": sina_symbol,
+            "name": parts[0],
+            "open": safe_float(parts[1]),
+            "pre_close": pre_close,
+            "price": price,
+            "high": safe_float(parts[4]),
+            "low": safe_float(parts[5]),
+            "volume": safe_float(parts[8]),
+            "amount": safe_float(parts[9]),
+            "pct_change": (price / pre_close - 1) * 100,
+            "date": parts[30] if len(parts) > 30 else None,
+            "time": parts[31] if len(parts) > 31 else None,
+        }
+
+    @staticmethod
+    def append_realtime_quote(daily: pd.DataFrame, symbol: str) -> pd.DataFrame:
+        """把新浪实时行情作为当日最新一行拼到日线数据中。"""
+        quote = DataFetcher.get_sina_realtime_quote(symbol)
+        if not quote or not quote.get("date"):
+            return daily
+
+        quote_date = pd.to_datetime(quote["date"], errors="coerce")
+        if pd.isna(quote_date):
+            return daily
+
+        df = daily.copy().sort_index()
+        last_date = df.index[-1] if not df.empty else None
+        if last_date is not None and quote_date < last_date:
+            return df
+
+        df.loc[quote_date, "open"] = quote.get("open")
+        df.loc[quote_date, "close"] = quote.get("price")
+        df.loc[quote_date, "high"] = quote.get("high")
+        df.loc[quote_date, "low"] = quote.get("low")
+        df.loc[quote_date, "volume"] = quote.get("volume")
+        df.loc[quote_date, "amount"] = quote.get("amount")
+        df.loc[quote_date, "pct_change"] = quote.get("pct_change")
+        return df.sort_index()
+
+    @staticmethod
+    def _fetch_index_via_sina(symbol: str, start_date: str, end_date: str):
+        """使用新浪财经 K 线接口获取指数日线。"""
+        import subprocess
+        import json
+        from datetime import datetime
+
+        raw_symbol = str(symbol).strip().lower()
+        sina_symbol = raw_symbol if raw_symbol.startswith(("sh", "sz")) else f"sh{raw_symbol}"
+
+        try:
+            d_start = datetime.strptime(start_date, "%Y%m%d")
+            d_end = datetime.strptime(end_date, "%Y%m%d")
+            datalen = max((d_end - d_start).days, 250)
+            datalen = min(datalen, 1023)
+        except Exception:
+            datalen = 1023
+
+        url = (
+            f"https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+            f"CN_MarketData.getKLineData?"
+            f"symbol={sina_symbol}&scale=240&ma=no&datalen={datalen}"
+        )
+
+        result = subprocess.run(
+            [
+                "curl", "-s", "-m", "30",
+                "--noproxy", "*",
+                "-H", "User-Agent: Mozilla/5.0",
+                "-H", "Referer: https://finance.sina.com.cn/",
+                url,
+            ],
+            capture_output=True, text=True, timeout=35,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            raise ConnectionError(f"新浪指数K线获取失败: {result.stderr[:200]}")
+
+        raw = result.stdout.strip().replace("'", '"')
+        klines = json.loads(raw)
+        if not klines:
+            raise ValueError(f"未获取到指数 {symbol} 的历史数据")
+
+        rows = []
+        for k in klines:
+            day = k.get("day", "")[:10]
+            rows.append({
+                "date": day,
+                "open": float(k.get("open", 0)),
+                "close": float(k.get("close", 0)),
+                "high": float(k.get("high", 0)),
+                "low": float(k.get("low", 0)),
+                "volume": float(k.get("volume", 0)),
+                "amount": 0.0,
+            })
+
+        df = pd.DataFrame(rows)
+        try:
+            start_dt = datetime.strptime(start_date, "%Y%m%d").strftime("%Y-%m-%d")
+            end_dt = datetime.strptime(end_date, "%Y%m%d").strftime("%Y-%m-%d")
+            df = df[(df["date"] >= start_dt) & (df["date"] <= end_dt)]
+        except Exception:
+            pass
         return df
 
     @staticmethod

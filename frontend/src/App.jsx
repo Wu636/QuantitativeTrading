@@ -1,5 +1,6 @@
+import { createElement } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { TrendingUp, Search, BarChart2, Activity, Brain, PieChart, Clock } from 'lucide-react'
+import { TrendingUp, Search, BarChart2, Activity, Brain, PieChart, Clock, Gauge } from 'lucide-react'
 import MarketStatus from './pages/MarketStatus'
 import TimingPicker from './pages/TimingPicker'
 import Backtest from './pages/Backtest'
@@ -7,6 +8,7 @@ import Compare from './pages/Compare'
 import Picker from './pages/Picker'
 import WalkForward from './pages/WalkForward'
 import Watchlist from './pages/Watchlist'
+import AbnormalMovement from './pages/AbnormalMovement'
 import './index.css'
 
 function Layout({ children }) {
@@ -16,6 +18,7 @@ function Layout({ children }) {
     { to: '/compare', label: '策略对比', Icon: BarChart2 },
     { to: '/timing', label: '时机选股', Icon: Clock },
     { to: '/picker', label: '选股中心', Icon: Search },
+    { to: '/abnormal', label: '异动计算', Icon: Gauge },
     { to: '/walk-forward', label: 'Walk-Forward', Icon: Activity },
     { to: '/watchlist', label: '自选分析', Icon: Brain },
   ]
@@ -52,7 +55,7 @@ function Layout({ children }) {
               end={to === '/'}
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
-              <Icon size={16} />
+              {createElement(Icon, { size: 16 })}
               {label}
             </NavLink>
           ))}
@@ -83,6 +86,7 @@ export default function App() {
           <Route path="/timing" element={<TimingPicker />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/picker" element={<Picker />} />
+          <Route path="/abnormal" element={<AbnormalMovement />} />
           <Route path="/walk-forward" element={<WalkForward />} />
           <Route path="/watchlist" element={<Watchlist />} />
         </Routes>

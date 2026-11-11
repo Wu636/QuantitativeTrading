@@ -20,7 +20,7 @@ AUCTION_CONFIGS = {
         "open_pct_min": 1.0,
         "open_pct_max": 7.0,
         "min_volume_ratio": 2.0,
-        "min_turnover": 1.0,
+        "min_turnover": 0.05,  # 集合竞价阶段换手率普遍极低
         "max_turnover": 10.0,
         "min_market_cap": 30e8,
         "max_market_cap": 500e8,
@@ -33,7 +33,7 @@ AUCTION_CONFIGS = {
         "open_pct_min": -5.0,
         "open_pct_max": -1.0,
         "min_volume_ratio": 1.5,
-        "min_turnover": 0.5,
+        "min_turnover": 0.01,
         "max_turnover": 8.0,
         "min_market_cap": 50e8,
         "max_market_cap": 800e8,

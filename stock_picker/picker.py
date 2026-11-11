@@ -14,7 +14,6 @@
 """
 
 import os
-import akshare as ak
 import pandas as pd
 from .filters import StockFilter
 from .scorer import FactorScorer
@@ -90,6 +89,10 @@ class StockPicker:
                     if result.returncode != 0 or not result.stdout.strip():
                         raise ConnectionError(f"curl failed: rc={result.returncode}")
     
+                    # Sina may return blocked HTML
+                    if "拒绝访问" in result.stdout:
+                        raise ConnectionError("新浪财经 API 拒绝访问 (IP 限制)")
+
                     items = json.loads(result.stdout)
                     break # Success
                 except Exception as e:
@@ -102,7 +105,8 @@ class StockPicker:
             
             if items is None:
                 if page == 1:
-                    raise ConnectionError(f"新浪财经 API 连接失败，已重试 {max_retries} 次。")
+                    print("  ⚠️ 新浪财经 API 拒绝访问或连接失败，将返回空数据。")
+                    return pd.DataFrame()
                 print(f"  ⚠️ 终止抓取，使用已获取的 {len(all_data)} 条数据")
                 break
                 
@@ -116,7 +120,10 @@ class StockPicker:
                 break  # 最后一页
 
             page += 1
-            time.sleep(0.2)
+            time.sleep(0.3)
+
+        if not all_data:
+            return pd.DataFrame()
 
         print(f"  获取到 {len(all_data)} 条原始数据，正在解析...")
 
@@ -152,12 +159,13 @@ class StockPicker:
             })
 
         df = pd.DataFrame(rows)
+
         # 确保数值列是数值类型
         numeric_cols = [
             "最新价", "涨跌幅", "涨跌额", "成交量", "成交额",
             "振幅", "最高", "最低", "今开", "昨收",
             "量比", "换手率", "市盈率-动态", "市净率",
-            "总市值", "流通市值", "60日涨跌幅", "年初至今涨跌幅",
+            "总市值", "流通市值",
         ]
         for col in numeric_cols:
             if col in df.columns:

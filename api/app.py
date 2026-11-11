@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import backtest, stock_picker, strategies, walk_forward, analyst, market, timing_picker, watchlist
+from api.routes import backtest, stock_picker, strategies, walk_forward, analyst, market, timing_picker, watchlist, abnormal
 from api.routes import ws_routes
 from api.ws_manager import data_feed
 
@@ -49,6 +49,7 @@ app.include_router(analyst.router, prefix="/api")
 app.include_router(market.router, prefix="/api")
 app.include_router(timing_picker.router, prefix="/api")
 app.include_router(watchlist.router, prefix="/api")
+app.include_router(abnormal.router, prefix="/api")
 
 # WebSocket 路由（无 /api 前缀）
 app.include_router(ws_routes.router)
@@ -57,4 +58,3 @@ app.include_router(ws_routes.router)
 @app.get("/")
 def root():
     return {"message": "A股量化交易系统 API", "docs": "/docs"}
-
